@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom'
+import {
+  AlertTriangle,
+  BadgeCheck,
+  Building2,
+  CircleX,
+  IdCard,
+  LoaderCircle,
+  UserRound,
+  WifiOff,
+} from 'lucide-react'
 import './App.css'
-import './portal.css'
 
-// Image imports (place these files in src/assets/)
+// Logo imports (place these files in src/assets/)
 import ajeerLogo from './assets/ajeer-logo.png'
 import mlsdLogo from './assets/mlsd-logo.png'
 import takamolLogo from './assets/takamol-logo.png'
@@ -13,228 +22,92 @@ import tamkeenLogo from './assets/tamkeen-logo-1 (1).svg'
 const API_BASE_URL = (import.meta.env.VITE_MAXYY_API_BASE_URL || '').replace(/\/$/, '')
 const verificationEndpoint = '/api/public/verify'
 
-// Converts nationality to Arabic when needed
-const formatNationality = (nat) => {
-  if (!nat) return '-'
-  const trimmed = String(nat).trim()
-  if (trimmed.toLowerCase() === 'pakistani' || trimmed.toLowerCase() === 'pakistan') {
-    return 'باكستاني'
-  }
-  return trimmed
-}
-
-// Converts gender to Arabic when needed
-const formatGender = (gender) => {
-  if (!gender) return '-'
-  const trimmed = String(gender).trim()
-  if (trimmed.toLowerCase() === 'male') return 'ذكر'
-  if (trimmed.toLowerCase() === 'female') return 'أنثى'
-  return trimmed
-}
-
-// Single label + value row
-function Row({ label, value, ltr = false }) {
+function LoadingState() {
   return (
-    <div className="vp-row">
-      <div className="vp-label">{label}</div>
-      <div dir={ltr ? 'ltr' : undefined} className="vp-value">
-        {value || '-'}
-      </div>
-    </div>
+    <main className="state-card" aria-live="polite">
+      <LoaderCircle className="state-icon spin" size={44} aria-hidden="true" />
+      <h1>Verifying permit</h1>
+      <p>Please wait while we check the permit with MAXYY.</p>
+    </main>
   )
 }
 
-// Shared page layout (header + card + footer + chat button)
-function PortalLayout({ children }) {
-  useEffect(() => {
-    // Dynamic Tajawal font injection
-    if (!document.getElementById('tajawal-font')) {
-      const link = document.createElement('link')
-      link.id = 'tajawal-font'
-      link.rel = 'stylesheet'
-      link.href =
-        'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap'
-      document.head.appendChild(link)
-    }
-
-    // Dynamic FontAwesome injection
-    if (!document.getElementById('font-awesome-css')) {
-      const faLink = document.createElement('link')
-      faLink.id = 'font-awesome-css'
-      faLink.rel = 'stylesheet'
-      faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
-      document.head.appendChild(faLink)
-    }
-  }, [])
-
+function StateCard({ tone, icon: Icon, title, message }) {
   return (
-    <div dir="rtl" className="vp-root">
-      {/* Top Header */}
-      <div className="vp-topbar">
-        <div style={{ height: 32 }}>
-          <img src={ajeerLogo} alt="أجير" style={{ height: 32, display: 'block' }} />
-        </div>
-        <div style={{ height: 38 }}>
-          <img
-            src={mlsdLogo}
-            alt="وزارة الموارد البشرية والتنمية الاجتماعية"
-            style={{ height: 38, display: 'block' }}
-          />
-        </div>
-      </div>
-
-      {/* Main Container */}
-      <div className="vp-container">
-        {/* Main Data Card */}
-        <div className="vp-card">
-          {/* Banner Logo Section */}
-          <div className="vp-banner">
-            <img src={ajeerLogo} alt="أجير" style={{ height: 48 }} />
-            <img src={mlsdLogo} alt="الموارد البشرية" style={{ height: 50 }} />
-          </div>
-
-          {/* Page Title */}
-          <h1 className="vp-title">التحقق من تصريح أجير</h1>
-
-          {children}
-        </div>
-
-        {/* Footer Navigation Links */}
-        <div className="vp-footer">
-          <div className="vp-footer-group">
-            <h4>أجير</h4>
-            <ul>
-              <li>
-                <a href="#">عن أجير</a>
-              </li>
-              <li>
-                <a href="#">خدمات أجير</a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="vp-footer-group">
-            <h4>الدعم</h4>
-            <ul>
-              <li>
-                <a href="#">الدعم و المساعدة</a>
-              </li>
-              <li>
-                <a href="#">الأسئلة الشائعة</a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="vp-footer-group">
-            <h4>الشروط و الخصوصية</h4>
-            <ul>
-              <li>
-                <a href="#">الشروط والأحكام</a>
-              </li>
-              <li>
-                <a href="#">سياسة الخصوصية</a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="vp-footer-group">
-            <h4>تواصل معنا</h4>
-            <div className="vp-social">
-              <a href="tel:">
-                <i className="fa-solid fa-phone"></i>
-              </a>
-              <a href="#">
-                <i className="fa-solid fa-paper-plane"></i>
-              </a>
-              <a href="#">
-                <i className="fa-brands fa-x-twitter"></i>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Partner Logos Footer */}
-        <div dir="rtl" className="vp-partners">
-          <div className="vp-partners-left">
-            <img
-              src={mlsdLogo}
-              alt="الموارد البشرية والتنمية الاجتماعية"
-              style={{ height: 42, display: 'block' }}
-            />
-            <img src={takamolLogo} alt="تكامل Takamol" style={{ height: 30, display: 'block' }} />
-          </div>
-
-          <div className="vp-partners-right">
-            <div className="vp-partner-row">
-              <span>مسجل لدى</span>
-              <img
-                src={govtAuthLogo}
-                alt="هيئة الحكومة الرقمية Digital Government Authority"
-                style={{ height: 35, display: 'block' }}
-              />
-            </div>
-
-            <div className="vp-partner-col">
-              <span></span>
-              <img
-                src={tamkeenLogo}
-                alt="تمكين للتقنيات Tamkeen Technologies"
-                style={{ height: 32, display: 'block' }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Chatbot Widget Button */}
-      <a href="#" title="Chat Support" className="vp-chat">
-        <svg viewBox="0 0 24 24" style={{ width: 32, height: 32, fill: '#fff' }}>
-          <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
-        </svg>
-      </a>
-    </div>
+    <main className={`state-card state-${tone}`} role="alert" aria-live="assertive">
+      <Icon className="state-icon" size={48} aria-hidden="true" />
+      <h1>{title}</h1>
+      <p>{message}</p>
+    </main>
   )
 }
 
-// Permit details (same UI as the old portal)
 function PermitDetails({ permit }) {
+  const groups = [
+    {
+      title: 'Permit Information',
+      icon: IdCard,
+      items: [
+        ['Permit Number', permit.permitNumber],
+        ['Permit Type', permit.permitType],
+        ['Issue Date', permit.issueDate],
+        ['Expiry Date', permit.expiryDate],
+      ],
+    },
+    {
+      title: 'Worker Information',
+      icon: UserRound,
+      items: [
+        ['Worker Name', permit.workerName],
+        ['Iqama / ID Number', permit.iqamaNumber],
+        ['Nationality', permit.nationality],
+        ['Job Title', permit.jobTitle],
+        ['Date of Birth', permit.dateOfBirth],
+        ['Gender', permit.gender],
+      ],
+    },
+    {
+      title: 'Establishment',
+      icon: Building2,
+      items: [
+        ['Iqama Mosasa Number', permit.iqamaMosasaNumber],
+        ['Establishment Name / اسم المنشأة', permit.establishmentName],
+      ],
+    },
+  ]
+
   return (
-    <>
-      {/* Status Badge */}
-      <div className="vp-status">
-        <span>ساري / فعال</span>
+    <main className="permit-card">
+      <div className="permit-header">
+        <div>
+          <p className="eyebrow">Permit Verification</p>
+          <h1>{permit.workerName}</h1>
+        </div>
+        <div className="active-status">
+          <BadgeCheck size={20} aria-hidden="true" />
+          <span>Active</span>
+        </div>
       </div>
 
-      {/* Success Message */}
-      <div className="vp-success">تم التحقق من التصريح بنجاح</div>
-
-      {/* Section 1: Permit Details */}
-      <div className="vp-section">
-        <div className="vp-section-title">بيانات التصريح</div>
-        <Row label="رقم التصريح" value={permit.permitNumber} ltr />
-        <Row label="نوع التصريح" value={permit.permitType} />
-        <Row label="تاريخ بداية التصريح" value={permit.issueDate} ltr />
-        <Row label="تاريخ نهاية التصريح" value={permit.expiryDate} ltr />
+      <div className="permit-groups">
+        {groups.map(({ title, icon: Icon, items }) => (
+          <section className="info-section" key={title}>
+            <div className="section-heading">
+              <Icon size={19} aria-hidden="true" />
+              <h2>{title}</h2>
+            </div>
+            <dl className="details-grid">
+              {items.map(([label, value]) => (
+                <div className="detail-item" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value || '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
       </div>
-
-      {/* Section 2: Worker Details */}
-      <div className="vp-section">
-        <div className="vp-section-title">بيانات العامل</div>
-        <Row label="اسم العامل" value={permit.workerName} ltr />
-        <Row label="رقم الهوية / الإقامة" value={permit.iqamaNumber} ltr />
-        <Row label="الجنسية" value={formatNationality(permit.nationality)} />
-        <Row label="المهنة" value={permit.jobTitle} />
-        <Row label="الجنس" value={formatGender(permit.gender)} />
-        <Row label="تاريخ الميلاد" value={permit.dateOfBirth} ltr />
-      </div>
-
-      {/* Section 3: Establishment Details */}
-      <div className="vp-section">
-        <div className="vp-section-title">بيانات المنشأة</div>
-        <Row label="رقم المنشأة" value={permit.iqamaMosasaNumber} ltr />
-        <Row label="اسم المنشأة" value={permit.establishmentName} />
-      </div>
-    </>
+    </main>
   )
 }
 
@@ -324,41 +197,100 @@ function VerificationPage() {
     return () => controller.abort()
   }, [token])
 
-  let content
+  if (state.type === 'loading') return <LoadingState />
 
-  if (state.type === 'loading') {
-    content = <div className="vp-loading">جاري التحميل...</div>
-  } else if (state.type === 'inactive') {
-    content = (
-      <div className="vp-error">
-        هذا التصريح غير فعال حالياً. يرجى التواصل مع الجهة المختصة لمزيد من المعلومات.
-      </div>
+  if (state.type === 'inactive') {
+    return (
+      <StateCard
+        tone="inactive"
+        icon={AlertTriangle}
+        title="INACTIVE PERMIT"
+        message="This permit is currently inactive. Please contact the relevant authority for further information."
+      />
     )
-  } else if (state.type === 'active') {
-    content = <PermitDetails permit={state.permit} />
-  } else {
-    // invalid / network / unavailable
-    content = <div className="vp-error">{state.message}</div>
   }
 
-  return <PortalLayout>{content}</PortalLayout>
+  if (state.type === 'network') {
+    return (
+      <StateCard tone="network" icon={WifiOff} title="Network Error" message={state.message} />
+    )
+  }
+
+  if (state.type === 'unavailable') {
+    return (
+      <StateCard
+        tone="unavailable"
+        icon={CircleX}
+        title="API Unavailable"
+        message={state.message}
+      />
+    )
+  }
+
+  if (state.type === 'invalid') {
+    return (
+      <StateCard
+        tone="invalid"
+        icon={CircleX}
+        title="Invalid or Not Found"
+        message={state.message}
+      />
+    )
+  }
+
+  return <PermitDetails permit={state.permit} />
 }
 
 function NotFound() {
   return (
-    <PortalLayout>
-      <div className="vp-error">Open a verification link in the format /verify/:token.</div>
-    </PortalLayout>
+    <StateCard
+      tone="invalid"
+      icon={CircleX}
+      title="Permit Token Required"
+      message="Open a verification link in the format /verify/:token."
+    />
   )
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/verify/:token" element={<VerificationPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="app-shell">
+        {/* Top bar with logos */}
+        <header className="topbar">
+          <Link className="brand" to="/" aria-label="AJEER home">
+            <img src={ajeerLogo} alt="أجير Ajeer" className="brand-logo" />
+          </Link>
+          <div className="topbar-right">
+            <span className="verification-label">Permit Verification</span>
+            <img
+              src={mlsdLogo}
+              alt="وزارة الموارد البشرية والتنمية الاجتماعية"
+              className="topbar-logo"
+            />
+          </div>
+        </header>
+
+        <Routes>
+          <Route path="/verify/:token" element={<VerificationPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+
+        {/* Partner logos footer */}
+        <footer className="partners">
+          <img src={takamolLogo} alt="تكامل Takamol" className="partner-logo" />
+          <img
+            src={govtAuthLogo}
+            alt="هيئة الحكومة الرقمية Digital Government Authority"
+            className="partner-logo partner-logo-lg"
+          />
+          <img
+            src={tamkeenLogo}
+            alt="تمكين للتقنيات Tamkeen Technologies"
+            className="partner-logo"
+          />
+        </footer>
+      </div>
     </BrowserRouter>
   )
 }
