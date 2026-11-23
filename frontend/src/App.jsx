@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom'
-import {
-  AlertTriangle,
-  BadgeCheck,
-  Building2,
-  CircleX,
-  IdCard,
-  LoaderCircle,
-  UserRound,
-  WifiOff,
-} from 'lucide-react'
+import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom'
 
 // Logo imports (place these files in src/assets/)
 import ajeerLogo from './assets/ajeer-logo.png'
@@ -21,153 +11,262 @@ import tamkeenLogo from './assets/tamkeen-logo-1 (1).svg'
 const API_BASE_URL = (import.meta.env.VITE_MAXYY_API_BASE_URL || '').replace(/\/$/, '')
 const verificationEndpoint = '/api/public/verify'
 
-// Shared width + spacing for the main cards
-const cardWidth =
-  'w-[min(1120px,calc(100%_-_24px))] md:w-[min(1120px,calc(100%_-_40px))] mx-auto my-6 md:my-11'
-
-// Tailwind classes for each state card tone
-const tones = {
-  default: {
-    card: 'border border-[#e3e9e8] bg-white',
-    icon: 'text-[#64748b]',
-    title: 'text-[#202d29]',
-  },
-  inactive: {
-    card: 'border-2 border-[#fecaca] bg-[#fff8f8]',
-    icon: 'text-[#b91c1c]',
-    title: 'text-[#b91c1c]',
-  },
-  invalid: {
-    card: 'border border-[#fecaca] bg-white',
-    icon: 'text-[#dc2626]',
-    title: 'text-[#202d29]',
-  },
-  unavailable: {
-    card: 'border border-[#fecaca] bg-white',
-    icon: 'text-[#dc2626]',
-    title: 'text-[#202d29]',
-  },
-  network: {
-    card: 'border border-[#fecaca] bg-white',
-    icon: 'text-[#dc2626]',
-    title: 'text-[#202d29]',
-  },
+// Converts nationality to Arabic when needed
+const formatNationality = (nat) => {
+  if (!nat) return '-'
+  const trimmed = String(nat).trim()
+  if (trimmed.toLowerCase() === 'pakistani' || trimmed.toLowerCase() === 'pakistan') {
+    return 'باكستاني'
+  }
+  return trimmed
 }
 
-function LoadingState() {
-  const t = tones.default
+// Converts gender to Arabic when needed
+const formatGender = (gender) => {
+  if (!gender) return '-'
+  const trimmed = String(gender).trim()
+  if (trimmed.toLowerCase() === 'male') return 'ذكر'
+  if (trimmed.toLowerCase() === 'female') return 'أنثى'
+  return trimmed
+}
+
+// Shows only the date part of ISO strings (2026-11-18T00:00:00.000Z -> 2026-11-18)
+const formatDate = (value) => {
+  if (!value) return '-'
+  return String(value).split('T')[0]
+}
+
+// Single label + value row
+function Row({ label, value, ltr = false }) {
   return (
-    <main
-      className={`${cardWidth} ${t.card} flex min-h-[360px] flex-col items-center justify-center rounded-[18px] px-7 py-12 text-center shadow-[0_18px_50px_rgba(31,55,48,0.08)]`}
-      aria-live="polite"
-    >
-      <LoaderCircle className={`${t.icon} animate-spin`} size={44} aria-hidden="true" />
-      <h1 className={`${t.title} mt-[18px] mb-2 text-[clamp(24px,4vw,34px)] font-bold`}>
-        Verifying permit
-      </h1>
-      <p className="m-0 max-w-[620px] leading-[1.65] text-[#66756f]">
-        Please wait while we check the permit with MAXYY.
-      </p>
-    </main>
+    <div className="border-b border-[#e2e8f0] last:border-b-0">
+      <div className="bg-[#f8fafc] py-[10px] px-[16px] text-[#374151] text-[15px] font-medium text-right">
+        {label}
+      </div>
+      <div
+        dir={ltr ? 'ltr' : undefined}
+        className="py-[12px] px-[16px] text-black text-[16px] font-bold text-right break-words bg-white"
+      >
+        {value || '-'}
+      </div>
+    </div>
   )
 }
 
-function StateCard({ tone, icon: Icon, title, message }) {
-  const t = tones[tone] || tones.default
+// Section wrapper with grey title bar
+function Section({ title, children }) {
   return (
-    <main
-      className={`${cardWidth} ${t.card} flex min-h-[360px] flex-col items-center justify-center rounded-[18px] px-7 py-12 text-center shadow-[0_18px_50px_rgba(31,55,48,0.08)]`}
-      role="alert"
-      aria-live="assertive"
-    >
-      <Icon className={t.icon} size={48} aria-hidden="true" />
-      <h1 className={`${t.title} mt-[18px] mb-2 text-[clamp(24px,4vw,34px)] font-bold`}>
+    <div className="border-b border-[#e2e8f0] last:border-b-0">
+      <div className="bg-[#edf2f7] py-[12px] px-[16px] text-[17px] font-bold text-[#111827] text-right border-b border-[#e2e8f0]">
         {title}
-      </h1>
-      <p className="m-0 max-w-[620px] leading-[1.65] text-[#66756f]">{message}</p>
-    </main>
+      </div>
+      {children}
+    </div>
   )
 }
 
-function PermitDetails({ permit }) {
-  const groups = [
-    {
-      title: 'Permit Information',
-      icon: IdCard,
-      className: 'border-b border-[#edf1f0] md:border-r',
-      items: [
-        ['Permit Number', permit.permitNumber],
-        ['Permit Type', permit.permitType],
-        ['Issue Date', permit.issueDate],
-        ['Expiry Date', permit.expiryDate],
-      ],
-    },
-    {
-      title: 'Worker Information',
-      icon: UserRound,
-      className: 'border-b border-[#edf1f0]',
-      items: [
-        ['Worker Name', permit.workerName],
-        ['Iqama / ID Number', permit.iqamaNumber],
-        ['Nationality', permit.nationality],
-        ['Job Title', permit.jobTitle],
-        ['Date of Birth', permit.dateOfBirth],
-        ['Gender', permit.gender],
-      ],
-    },
-    {
-      title: 'Establishment',
-      icon: Building2,
-      className: 'md:col-span-2',
-      items: [
-        ['Iqama Mosasa Number', permit.iqamaMosasaNumber],
-        ['Establishment Name / اسم المنشأة', permit.establishmentName],
-      ],
-    },
-  ]
+// Shared page layout (header + card + footer + chat button)
+function PortalLayout({ children }) {
+  useEffect(() => {
+    // Dynamic Tajawal font injection
+    if (!document.getElementById('tajawal-font')) {
+      const link = document.createElement('link')
+      link.id = 'tajawal-font'
+      link.rel = 'stylesheet'
+      link.href =
+        'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap'
+      document.head.appendChild(link)
+    }
+
+    // Dynamic FontAwesome injection
+    if (!document.getElementById('font-awesome-css')) {
+      const faLink = document.createElement('link')
+      faLink.id = 'font-awesome-css'
+      faLink.rel = 'stylesheet'
+      faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+      document.head.appendChild(faLink)
+    }
+  }, [])
 
   return (
-    <main
-      className={`${cardWidth} rounded-[18px] border border-[#e3e9e8] bg-white shadow-[0_18px_50px_rgba(31,55,48,0.08)]`}
+    <div
+      dir="rtl"
+      className="min-h-screen bg-[#f8fafc] text-[#1a202c] font-['Tajawal',sans-serif] text-right text-base leading-normal"
     >
-      {/* Header */}
-      <div className="flex min-h-[112px] flex-col items-start justify-between gap-6 border-b border-[#edf1f0] px-5 py-[22px] min-[431px]:flex-row min-[431px]:items-start md:items-center md:px-8 md:py-[26px]">
-        <div>
-          <p className="mb-[5px] text-xs font-extrabold uppercase tracking-[0.12em] text-[#74827f]">
-            Permit Verification
-          </p>
-          <h1 className="m-0 text-[clamp(24px,3vw,34px)] leading-[1.15] font-bold text-[#172033]">
-            {permit.workerName}
-          </h1>
+      {/* Top Header */}
+      <div className="flex justify-between items-center px-4 py-3 bg-white border-b border-[#e2e8f0] w-full">
+        <div className="h-[32px]">
+          <img src={ajeerLogo} alt="أجير" className="h-[32px] block" />
         </div>
-        <div className="inline-flex flex-none items-center gap-2 rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-4 py-2.5 text-[15px] font-extrabold uppercase text-[#166534]">
-          <BadgeCheck size={20} aria-hidden="true" />
-          <span>Active</span>
+        <div className="h-[38px]">
+          <img
+            src={mlsdLogo}
+            alt="وزارة الموارد البشرية والتنمية الاجتماعية"
+            className="h-[38px] block"
+          />
         </div>
       </div>
 
-      {/* Info groups */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.35fr]">
-        {groups.map(({ title, icon: Icon, items, className }) => (
-          <section className={`px-5 py-[22px] md:px-8 md:py-7 ${className}`} key={title}>
-            <div className="mb-5 flex items-center gap-[9px] text-[#16794a]">
-              <Icon size={19} aria-hidden="true" />
-              <h2 className="m-0 text-base font-bold text-[#26352f]">{title}</h2>
+      {/* Main Container */}
+      <div className="max-w-[480px] mx-auto my-[15px] px-[12px]">
+        {/* Main Data Card */}
+        <div className="bg-white border border-[#dcdcdc] rounded-[2px] overflow-hidden mb-[30px]">
+          {/* Banner Logo Section */}
+          <div className="flex justify-center items-center gap-[15px] pt-[25px] pb-[15px] px-[15px] border-b border-[#e2e8f0]">
+            <img src={ajeerLogo} alt="أجير" className="h-[48px]" />
+            <img src={mlsdLogo} alt="الموارد البشرية" className="h-[50px]" />
+          </div>
+
+          {/* Page Title */}
+          <h1 className="text-center text-[22px] font-[800] text-[#111827] py-[18px] px-[10px] border-b border-[#e2e8f0]">
+            التحقق من تصريح أجير
+          </h1>
+
+          {children}
+        </div>
+
+        {/* Footer Navigation Links */}
+        <div className="mt-[30px] px-[10px] text-right">
+          <div className="mb-[25px]">
+            <h4 className="text-[16px] text-[#111827] mb-[10px] font-bold">أجير</h4>
+            <ul className="list-none p-0">
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">عن أجير</a>
+              </li>
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">خدمات أجير</a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="mb-[25px]">
+            <h4 className="text-[16px] text-[#111827] mb-[10px] font-bold">الدعم</h4>
+            <ul className="list-none p-0">
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">الدعم و المساعدة</a>
+              </li>
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">الأسئلة الشائعة</a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="mb-[25px]">
+            <h4 className="text-[16px] text-[#111827] mb-[10px] font-bold">الشروط و الخصوصية</h4>
+            <ul className="list-none p-0">
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">الشروط والأحكام</a>
+              </li>
+              <li className="mb-[8px]">
+                <a href="#" className="text-[#6b7280] text-[14px] font-medium no-underline hover:underline">سياسة الخصوصية</a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="mb-[25px]">
+            <h4 className="text-[16px] text-[#111827] mb-[10px] font-bold">تواصل معنا</h4>
+            <div className="flex justify-start items-center gap-[18px] mt-[10px]">
+              <a href="tel:" className="text-[#1f2937] text-[18px] no-underline hover:text-black">
+                <i className="fa-solid fa-phone"></i>
+              </a>
+              <a href="#" className="text-[#1f2937] text-[18px] no-underline hover:text-black">
+                <i className="fa-solid fa-paper-plane"></i>
+              </a>
+              <a href="#" className="text-[#1f2937] text-[18px] no-underline hover:text-black">
+                <i className="fa-brands fa-x-twitter"></i>
+              </a>
             </div>
-            <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-[18px] md:grid-cols-2">
-              {items.map(([label, value]) => (
-                <div className="min-w-0" key={label}>
-                  <dt className="mb-[5px] text-xs font-bold text-[#7a8985]">{label}</dt>
-                  <dd className="m-0 text-[15px] font-bold break-words text-[#202d29]">
-                    {value || '—'}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
+          </div>
+        </div>
+
+        {/* Bottom Partner Logos Footer */}
+        <div
+          dir="rtl"
+          className="flex justify-between items-start pt-[25px] pb-[35px] border-t border-[#e5e7eb] mt-[25px]"
+        >
+          <div className="w-1/2 flex flex-col items-end gap-[20px] pl-[15px]">
+            <img
+              src={mlsdLogo}
+              alt="الموارد البشرية والتنمية الاجتماعية"
+              className="h-[42px] block"
+            />
+            <img src={takamolLogo} alt="تكامل Takamol" className="h-[30px] block" />
+          </div>
+
+          <div className="w-1/2 flex flex-col items-start gap-[25px] pr-[15px] border-r border-[#e5e7eb]">
+            <div className="flex flex-row items-center gap-[8px]">
+              <span className="text-[11px] text-[#6b7280] font-medium">مسجل لدى</span>
+              <img
+                src={govtAuthLogo}
+                alt="هيئة الحكومة الرقمية Digital Government Authority"
+                className="h-[35px] block"
+              />
+            </div>
+
+            <div className="flex flex-col items-start gap-[4px]">
+              <span className="text-[11px] text-[#6b7280] font-medium"></span>
+              <img
+                src={tamkeenLogo}
+                alt="تمكين للتقنيات Tamkeen Technologies"
+                className="h-[32px] block"
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </main>
+
+      {/* Floating Chatbot Widget Button */}
+      <a
+        href="#"
+        title="Chat Support"
+        className="fixed bottom-[25px] left-[20px] bg-[#38a169] w-[62px] h-[62px] rounded-full flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.25)] z-[999] no-underline cursor-pointer"
+      >
+        <svg viewBox="0 0 24 24" className="w-[32px] h-[32px] fill-white">
+          <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
+        </svg>
+      </a>
+    </div>
+  )
+}
+
+// Permit details (same UI as the old portal)
+function PermitDetails({ permit }) {
+  return (
+    <>
+      {/* Status Badge */}
+      <div className="text-center py-[16px] px-[10px] border-b border-[#e2e8f0]">
+        <span className="inline-block text-[#0d8a5f] text-[20px] font-bold">ساري / فعال</span>
+      </div>
+
+      {/* Success Message */}
+      <div className="text-center text-[#4b5563] text-[15px] py-[18px] px-[10px] border-b border-[#e2e8f0] font-medium">
+        تم التحقق من التصريح بنجاح
+      </div>
+
+      {/* Section 1: Permit Details */}
+      <Section title="بيانات التصريح">
+        <Row label="رقم التصريح" value={permit.permitNumber} ltr />
+        <Row label="نوع التصريح" value={permit.permitType} />
+        <Row label="تاريخ بداية التصريح" value={formatDate(permit.issueDate)} ltr />
+        <Row label="تاريخ نهاية التصريح" value={formatDate(permit.expiryDate)} ltr />
+      </Section>
+
+      {/* Section 2: Worker Details */}
+      <Section title="بيانات العامل">
+        <Row label="اسم العامل" value={permit.workerName} ltr />
+        <Row label="رقم الهوية / الإقامة" value={permit.iqamaNumber} ltr />
+        <Row label="الجنسية" value={formatNationality(permit.nationality)} />
+        <Row label="المهنة" value={permit.jobTitle} />
+        <Row label="الجنس" value={formatGender(permit.gender)} />
+        <Row label="تاريخ الميلاد" value={formatDate(permit.dateOfBirth)} ltr />
+      </Section>
+
+      {/* Section 3: Establishment Details */}
+      <Section title="بيانات المنشأة">
+        <Row label="رقم المنشأة" value={permit.iqamaMosasaNumber} ltr />
+        <Row label="اسم المنشأة" value={permit.establishmentName} />
+      </Section>
+    </>
   )
 }
 
@@ -257,102 +356,47 @@ function VerificationPage() {
     return () => controller.abort()
   }, [token])
 
-  if (state.type === 'loading') return <LoadingState />
+  let content
 
-  if (state.type === 'inactive') {
-    return (
-      <StateCard
-        tone="inactive"
-        icon={AlertTriangle}
-        title="INACTIVE PERMIT"
-        message="This permit is currently inactive. Please contact the relevant authority for further information."
-      />
+  if (state.type === 'loading') {
+    content = <div className="text-center py-10 text-gray-500 font-bold">جاري التحميل...</div>
+  } else if (state.type === 'inactive') {
+    content = (
+      <div className="text-center py-[40px] px-[20px] text-[16px] text-[#dc2626] font-bold">
+        هذا التصريح غير فعال حالياً. يرجى التواصل مع الجهة المختصة لمزيد من المعلومات.
+      </div>
+    )
+  } else if (state.type === 'active') {
+    content = <PermitDetails permit={state.permit} />
+  } else {
+    // invalid / network / unavailable
+    content = (
+      <div className="text-center py-[40px] px-[20px] text-[16px] text-[#dc2626] font-bold">
+        {state.message}
+      </div>
     )
   }
 
-  if (state.type === 'network') {
-    return (
-      <StateCard tone="network" icon={WifiOff} title="Network Error" message={state.message} />
-    )
-  }
-
-  if (state.type === 'unavailable') {
-    return (
-      <StateCard
-        tone="unavailable"
-        icon={CircleX}
-        title="API Unavailable"
-        message={state.message}
-      />
-    )
-  }
-
-  if (state.type === 'invalid') {
-    return (
-      <StateCard
-        tone="invalid"
-        icon={CircleX}
-        title="Invalid or Not Found"
-        message={state.message}
-      />
-    )
-  }
-
-  return <PermitDetails permit={state.permit} />
+  return <PortalLayout>{content}</PortalLayout>
 }
 
 function NotFound() {
   return (
-    <StateCard
-      tone="invalid"
-      icon={CircleX}
-      title="Permit Token Required"
-      message="Open a verification link in the format /verify/:token."
-    />
+    <PortalLayout>
+      <div className="text-center py-[40px] px-[20px] text-[16px] text-[#dc2626] font-bold">
+        Open a verification link in the format /verify/:token.
+      </div>
+    </PortalLayout>
   )
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-[#f3f6f8] bg-[radial-gradient(circle_at_85%_10%,rgba(21,128,61,0.07),transparent_24rem)]">
-        {/* Top bar with logos */}
-        <header className="flex h-16 items-center justify-between border-b border-[#e2e8ec] bg-white px-[clamp(20px,5vw,72px)] md:h-[72px]">
-          <Link className="inline-flex items-center no-underline" to="/" aria-label="AJEER home">
-            <img src={ajeerLogo} alt="أجير Ajeer" className="block h-8 w-auto md:h-[38px]" />
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm font-semibold text-[#64748b] md:inline">
-              Permit Verification
-            </span>
-            <img
-              src={mlsdLogo}
-              alt="وزارة الموارد البشرية والتنمية الاجتماعية"
-              className="block h-[38px] w-auto md:h-11"
-            />
-          </div>
-        </header>
-
-        <Routes>
-          <Route path="/verify/:token" element={<VerificationPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-
-        {/* Partner logos footer */}
-        <footer className="mx-auto flex w-[min(1120px,calc(100%_-_24px))] flex-wrap items-center justify-center gap-x-7 gap-y-5 border-t border-[#e2e8ec] pt-7 pb-10 md:w-[min(1120px,calc(100%_-_40px))] md:gap-x-11">
-          <img src={takamolLogo} alt="تكامل Takamol" className="block h-8 w-auto" />
-          <img
-            src={govtAuthLogo}
-            alt="هيئة الحكومة الرقمية Digital Government Authority"
-            className="block h-[38px] w-auto"
-          />
-          <img
-            src={tamkeenLogo}
-            alt="تمكين للتقنيات Tamkeen Technologies"
-            className="block h-8 w-auto"
-          />
-        </footer>
-      </div>
+      <Routes>
+        <Route path="/verify/:token" element={<VerificationPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </BrowserRouter>
   )
 }
